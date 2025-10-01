@@ -35,7 +35,7 @@ jobs:
           mingw-w64-x86_64-make
         update: true
 
-    # Установка kissfft вручную (упрощенная версия)
+    # Установка kissfft вручную (исправленная версия)
     - name: Install kissfft manually (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
@@ -43,34 +43,20 @@ jobs:
         echo "Installing kissfft manually..."
         git clone https://github.com/mborgerding/kissfft.git
         cd kissfft
-        # Создаем простой Makefile для компиляции
-        cat > Makefile << 'EOF'
-        CC=gcc
-        CFLAGS=-O3 -fPIC -I.
-        SRCS=kiss_fft.c tools/kiss_fftr.c
-        OBJS=$(SRCS:.c=.o)
-        LIB=libkissfft-float.a
-        
-        all: $(LIB)
-        
-        $(LIB): $(OBJS)
-        	ar rcs $@ $^
-        
-        %.o: %.c
-        	$(CC) $(CFLAGS) -c $< -o $@
-        
-        install:
-        	cp $(LIB) /mingw64/lib/
-        	cp kiss_fft.h /mingw64/include/
-        	cp tools/kiss_fftr.h /mingw64/include/
-        
-        clean:
-        	rm -f $(OBJS) $(LIB)
-        EOF
-        make -j$(nproc)
-        make install
+        # Создаем директорию для объектных файлов
+        mkdir -p obj
+        # Компилируем основные файлы
+        gcc -O3 -fPIC -I. -c kiss_fft.c -o obj/kiss_fft.o
+        gcc -O3 -fPIC -I. -c tools/kiss_fftr.c -o obj/kiss_fftr.o
+        # Создаем библиотеку
+        ar rcs libkissfft-float.a obj/kiss_fft.o obj/kiss_fftr.o
+        # Устанавливаем
+        cp libkissfft-float.a /mingw64/lib/
+        cp kiss_fft.h /mingw64/include/
+        cp tools/kiss_fftr.h /mingw64/include/
+        echo "kissfft installed successfully"
 
-    # Установка liquid-dsp вручную (упрощенная версия)
+    # Установка liquid-dsp вручную (исправленная версия)
     - name: Install liquid-dsp manually (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
@@ -78,31 +64,22 @@ jobs:
         echo "Installing liquid-dsp manually..."
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
-        # Создаем простой Makefile для компиляции основных файлов
-        cat > Makefile << 'EOF'
-        CC=gcc
-        CFLAGS=-O3 -fPIC -Iinclude -DLIQUID_EXPORT
-        SRCS=$(wildcard src/*.c)
-        OBJS=$(SRCS:.c=.o)
-        LIB=libliquid.a
-        
-        all: $(LIB)
-        
-        $(LIB): $(OBJS)
-        	ar rcs $@ $^
-        
-        %.o: %.c
-        	$(CC) $(CFLAGS) -c $< -o $@
-        
-        install:
-        	cp $(LIB) /mingw64/lib/
-        	cp -r include/liquid /mingw64/include/
-        
-        clean:
-        	rm -f $(OBJS) $(LIB)
-        EOF
-        make -j$(nproc)
-        make install
+        # Создаем директорию для объектных файлов
+        mkdir -p obj
+        # Компилируем основные исходные файлы
+        for src_file in src/*.c; do
+          if [ -f "$src_file" ]; then
+            obj_file="obj/$(basename "$src_file" .c).o"
+            echo "Compiling $src_file -> $obj_file"
+            gcc -O3 -fPIC -Iinclude -DLIQUID_EXPORT -c "$src_file" -o "$obj_file"
+          fi
+        done
+        # Создаем библиотеку
+        ar rcs libliquid.a obj/*.o
+        # Устанавливаем
+        cp libliquid.a /mingw64/lib/
+        cp -r include/liquid /mingw64/include/
+        echo "liquid-dsp installed successfully"
 
     # Установка зависимостей для Linux
     - name: Install dependencies (Linux)
