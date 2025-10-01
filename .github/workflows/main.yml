@@ -1,0 +1,78 @@
+name: Build Spectrum Analyzer Cross-Platform
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake pkg-config
+
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install cmake pkg-config
+
+    - name: Patch code for Windows (unistd.h)
+      if: matrix.os == 'Windows'
+      shell: pwsh
+      run: |
+        $content = Get-Content main.cpp -Raw
+        $content = $content -replace '#include <unistd\.h>', '#ifdef _WIN32`n#include <windows.h>`n#define usleep(us) Sleep((us)/1000)`n#else`n#include <unistd.h>`n#endif'
+        Set-Content main.cpp $content
+
+    - name: Install vcpkg and packages
+      uses: lukka/run-vcpkg@v11
+      id: vcpkg
+      with:
+        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+        packages: 'sdl2 sdl2-ttf liquid-dsp rtlsdr'
+
+    - name: Create CMakeLists.txt
+      run: |
+        cat > CMakeLists.txt << EOF
+        cmake_minimum_required(VERSION 3.20)
+        project(SpectrumAnalyzer)
+
+        set(CMAKE_CXX_STANDARD 17)
+        set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+        find_package(SDL2 CONFIG REQUIRED)
+        find_package(SDL2_ttf CONFIG REQUIRED)
+        find_package(liquid CONFIG REQUIRED)
+        find_package(rtlsdr CONFIG REQUIRED)
+
+        add_executable(app main.cpp)
+
+        target_link_libraries(app PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf liquid::liquid rtlsdr::rtlsdr)
+
+        if(UNIX AND NOT APPLE)
+          target_link_libraries(app PRIVATE pthread)
+        endif()
+        EOF
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.toolchainfile }}
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: spectrum-analyzer-${{ matrix.os }}
+        path: build/Release/app.exe
