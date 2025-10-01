@@ -70,6 +70,8 @@ jobs:
         ./bootstrap.sh
         export ac_cv_lib_c_main=yes
         export ac_cv_lib_m_main=yes
+        export ac_cv_func_malloc=yes
+        export ac_cv_func_realloc=yes
         ./configure --prefix=/mingw64 CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
         make -j$(nproc)
         make install
