@@ -29,12 +29,33 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libusb
-          mingw-w64-x86_64-kissfft
-          mingw-w64-x86_64-liquid-dsp
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-SDL2_ttf
           git
         update: true
+
+    # Установка liquid-dsp вручную на Windows
+    - name: Install liquid-dsp manually (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        git clone https://github.com/jgaeddert/liquid-dsp.git
+        cd liquid-dsp
+        ./bootstrap.sh
+        ./configure --prefix=/mingw64
+        make -j$(nproc)
+        make install
+
+    # Установка kissfft вручную на Windows
+    - name: Install kissfft manually (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        git clone https://github.com/mborgerding/kissfft.git
+        cd kissfft
+        mkdir build && cd build
+        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF
+        cmake --build . --config Release --target install
 
     # Установка зависимостей для Linux
     - name: Install dependencies (Linux)
@@ -68,8 +89,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
-        mingw32-make -j$(nproc)
-        mingw32-make install
+        cmake --build . --config Release --target install
 
     # Сборка freqmon (Linux)
     - name: Compile freqmon (Linux)
