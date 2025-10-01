@@ -52,7 +52,15 @@ jobs:
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install libusb kissfft liquid-dsp sdl2 sdl2_ttf cmake pkg-config
+        brew install libusb liquid-dsp sdl2 sdl2_ttf cmake pkg-config
+        # Устанавливаем kissfft вручную
+        curl -L https://github.com/mborgerding/kissfft/archive/refs/tags/v131.1.0.tar.gz -o kissfft.tar.gz
+        tar -xzf kissfft.tar.gz
+        cd kissfft-*
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+        make -j$(sysctl -n hw.ncpu)
+        sudo make install
 
     # Загрузка и установка custom rtl-sdr (Linux/macOS)
     - name: Download and build custom rtl-sdr (Linux/macOS)
@@ -67,7 +75,10 @@ jobs:
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
         make -j$(nproc)
         sudo make install
-        sudo ldconfig  # Важно для обновления кэша библиотек
+        # Обновляем кэш библиотек только на Linux
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo ldconfig
+        fi
 
     # Загрузка и установка custom rtl-sdr (Windows)
     - name: Download and build custom rtl-sdr (Windows)
@@ -90,8 +101,7 @@ jobs:
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
           -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
-          -I/usr/local/include -L/usr/local/lib \
-          -Wl,-rpath,/usr/local/lib
+          -I/usr/local/include -L/usr/local/lib
 
     # Сборка freqmon (Windows)
     - name: Compile freqmon (Windows)
