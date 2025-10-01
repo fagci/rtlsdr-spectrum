@@ -46,44 +46,39 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential curl
+        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential git
 
-    # Загрузка и установка custom rtl-sdr (Linux/macOS)
-    - name: Download and build custom rtl-sdr (Linux/macOS)
-      if: runner.os != 'Windows'
+    # Загрузка и установка custom rtl-sdr (Linux)
+    - name: Download and build custom rtl-sdr (Linux)
+      if: runner.os == 'Linux'
       run: |
-        curl -L https://gitea.osmocom.org/api/v1/repos/sultanqasim/rtl-sdr/archive/refs/heads/fast_retune.tar.gz -o rtl-sdr.tar.gz
-        tar -xzf rtl-sdr.tar.gz
-        mv rtl-sdr-* rtl-sdr
+        git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
         cd rtl-sdr
+        git checkout fast_retune
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
         make -j$(nproc)
         sudo make install
-        # Обновляем кэш библиотек только на Linux
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          sudo ldconfig
-        fi
+        sudo ldconfig
 
     # Загрузка и установка custom rtl-sdr (Windows)
     - name: Download and build custom rtl-sdr (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
-        curl -L https://gitea.osmocom.org/api/v1/repos/sultanqasim/rtl-sdr/archive/refs/heads/fast_retune.tar.gz -o rtl-sdr.tar.gz
-        tar -xzf rtl-sdr.tar.gz
-        mv rtl-sdr-* rtl-sdr
+        git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
         cd rtl-sdr
+        git checkout fast_retune
         mkdir build
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
         mingw32-make -j$(nproc)
         mingw32-make install
 
-    # Сборка freqmon (Linux/macOS)
-    - name: Compile freqmon (Linux/macOS)
-      if: runner.os != 'Windows'
+    # Сборка freqmon (Linux)
+    - name: Compile freqmon (Linux)
+      if: runner.os == 'Linux'
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
           -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
