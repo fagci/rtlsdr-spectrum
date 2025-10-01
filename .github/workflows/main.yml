@@ -36,7 +36,6 @@ jobs:
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libusb
         update: true
-      shell: msys2 {0}
 
     # Клонирование и установка custom rtl-sdr (Linux/macOS)
     - name: Clone and build custom rtl-sdr (Linux/macOS)
