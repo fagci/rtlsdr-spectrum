@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v4
@@ -47,20 +47,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential curl
-
-    # Установка зависимостей для macOS
-    - name: Install dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install libusb liquid-dsp sdl2 sdl2_ttf cmake pkg-config
-        # Устанавливаем kissfft вручную
-        curl -L https://github.com/mborgerding/kissfft/archive/refs/tags/v131.1.0.tar.gz -o kissfft.tar.gz
-        tar -xzf kissfft.tar.gz
-        cd kissfft-*
-        mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
-        make -j$(sysctl -n hw.ncpu)
-        sudo make install
 
     # Загрузка и установка custom rtl-sdr (Linux/macOS)
     - name: Download and build custom rtl-sdr (Linux/macOS)
