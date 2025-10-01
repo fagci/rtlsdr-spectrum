@@ -64,21 +64,11 @@ jobs:
         echo "Installing liquid-dsp manually..."
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
-        # Создаем директорию для объектных файлов
-        mkdir -p obj
-        # Компилируем основные исходные файлы
-        for src_file in src/*.c; do
-          if [ -f "$src_file" ]; then
-            obj_file="obj/$(basename "$src_file" .c).o"
-            echo "Compiling $src_file -> $obj_file"
-            gcc -O3 -fPIC -Iinclude -DLIQUID_EXPORT -c "$src_file" -o "$obj_file"
-          fi
-        done
-        # Создаем библиотеку
-        ar rcs libliquid.a obj/*.o
-        # Устанавливаем
-        cp libliquid.a /mingw64/lib/
-        cp -r include/liquid /mingw64/include/
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        make -j$(nproc)
+        make install
         echo "liquid-dsp installed successfully"
 
     # Установка зависимостей для Linux
