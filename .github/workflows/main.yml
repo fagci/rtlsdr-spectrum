@@ -33,31 +33,67 @@ jobs:
           mingw-w64-x86_64-SDL2_ttf
           git
           mingw-w64-x86_64-make
+          autoconf
+          automake-wrapper
+          automake1.16
+          libtool
         update: true
 
-    # Установка liquid-dsp через autotools на Windows
-    - name: Install liquid-dsp manually (Windows)
+    # Поиск и установка liquid-dsp и kissfft через pacman
+    - name: Find and install DSP libraries (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
-        git clone https://github.com/jgaeddert/liquid-dsp.git
-        cd liquid-dsp
-        ./bootstrap.sh
-        ./configure --prefix=/mingw64
-        make -j$(nproc)
-        make install
+        # Поиск доступных пакетов
+        echo "Searching for available packages..."
+        pacman -Ss kissfft || echo "kissfft not found in repos"
+        pacman -Ss liquid-dsp || echo "liquid-dsp not found in repos"
+        pacman -Ss liquid || echo "liquid not found in repos"
+        
+        # Попробуем установить из AUR или других источников
+        echo "Installing kissfft from AUR helper if available..."
+        pacman -S --noconfirm mingw-w64-x86_64-kissfft 2>/dev/null || echo "kissfft not available in main repos"
+        
+        echo "Installing liquid-dsp from AUR helper if available..."
+        pacman -S --noconfirm mingw-w64-x86_64-liquid-dsp 2>/dev/null || echo "liquid-dsp not available in main repos"
 
-    # Установка kissfft вручную на Windows
+    # Установка kissfft вручную через CMake (простая сборка)
     - name: Install kissfft manually (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
+        echo "Installing kissfft manually..."
         git clone https://github.com/mborgerding/kissfft.git
         cd kissfft
-        mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF -DCMAKE_BUILD_TYPE=Release
-        make -j$(nproc)
-        make install
+        # Простая компиляция без установки - просто копируем файлы
+        gcc -c -O3 -fPIC -I. kiss_fft.c -o kiss_fft.o
+        gcc -c -O3 -fPIC -I. tools/kiss_fftr.c -o kiss_fftr.o
+        ar rcs libkissfft-float.a kiss_fft.o kiss_fftr.o
+        cp libkissfft-float.a /mingw64/lib/
+        cp kiss_fft.h /mingw64/include/
+        cp tools/kiss_fftr.h /mingw64/include/
+
+    # Установка liquid-dsp вручную (упрощенная сборка)
+    - name: Install liquid-dsp manually (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        echo "Installing liquid-dsp manually..."
+        git clone https://github.com/jgaeddert/liquid-dsp.git
+        cd liquid-dsp
+        # Используем простой Makefile если доступен, или компилируем напрямую
+        if [ -f Makefile.in ]; then
+          ./configure --prefix=/mingw64
+          make -j$(nproc)
+          make install
+        else
+          # Простая компиляция основных файлов
+          mkdir -p src
+          find . -name "*.c" -exec gcc -c -O3 -fPIC -Iinclude {} -o {}.o \;
+          ar rcs libliquid.a *.o
+          cp libliquid.a /mingw64/lib/
+          cp -r include/liquid /mingw64/include/
+        fi
 
     # Установка зависимостей для Linux
     - name: Install dependencies (Linux)
