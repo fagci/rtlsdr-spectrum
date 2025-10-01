@@ -68,12 +68,12 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev
+        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev
 
     - name: Install dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install kissfft liquid-dsp sdl2 sdl2_ttf
+        brew install libusb kissfft liquid-dsp sdl2 sdl2_ttf
 
     # Сборка freqmon (Linux/macOS)
     - name: Compile freqmon (Linux/macOS)
