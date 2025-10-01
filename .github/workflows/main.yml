@@ -32,19 +32,21 @@ jobs:
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-SDL2_ttf
           git
+          autoconf
+          automake
+          libtool
         update: true
 
-    # Установка liquid-dsp вручную на Windows
+    # Установка liquid-dsp через CMake на Windows
     - name: Install liquid-dsp manually (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
-        ./bootstrap.sh
-        ./configure --prefix=/mingw64
-        make -j$(nproc)
-        make install
+        mkdir build && cd build
+        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --config Release --target install
 
     # Установка kissfft вручную на Windows
     - name: Install kissfft manually (Windows)
@@ -54,7 +56,7 @@ jobs:
         git clone https://github.com/mborgerding/kissfft.git
         cd kissfft
         mkdir build && cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF
+        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF -DCMAKE_BUILD_TYPE=Release
         cmake --build . --config Release --target install
 
     # Установка зависимостей для Linux
