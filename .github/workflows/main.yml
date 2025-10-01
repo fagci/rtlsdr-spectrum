@@ -63,7 +63,7 @@ jobs:
         mingw32-make -j$(nproc)
         mingw32-make install
 
-    # Установка остальных зависимостей (Linux/macOS)
+    # Установка остальных зависимостей (Linux)
     - name: Install dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
