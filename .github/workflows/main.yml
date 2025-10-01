@@ -1,4 +1,4 @@
-name: Build Spectrum Analyzer Cross-Platform
+name: Build freqmon with custom rtl-sdr
 
 on:
   push:
@@ -11,68 +11,93 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v4
 
+    # Установка MinGW на Windows
+    - name: Set up MinGW (Windows)
+      if: runner.os == 'Windows'
+      uses: egor-tensin/setup-mingw@v2
+      with:
+        platform: x64
+
+    # Установка MSYS2 для Windows
+    - name: Setup MSYS2 (Windows)
+      if: runner.os == 'Windows'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: >-
+          base-devel
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-libusb
+        update: true
+      shell: msys2 {0}
+
+    # Клонирование и установка custom rtl-sdr
+    - name: Clone custom rtl-sdr repo
+      run: |
+        git clone --depth 1 -b fast_retune https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+        cd rtl-sdr
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+        make -j$(nproc)
+        sudo make install
+      if: runner.os != 'Windows'
+      shell: bash
+
+    # Windows: сборка rtl-sdr в MSYS2
+    - name: Build and install custom rtl-sdr (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        git clone --depth 1 -b fast_retune https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+        cd rtl-sdr
+        mkdir build
+        cd build
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
+        mingw32-make -j$(nproc)
+        mingw32-make install
+
+    # Установка остальных зависимостей (Linux/macOS)
     - name: Install dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake pkg-config
+        sudo apt-get install -y libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev
 
     - name: Install dependencies (macOS)
-      if: matrix.os == 'macos-latest'
+      if: runner.os == 'macOS'
       run: |
-        brew install cmake pkg-config
+        brew install kissfft liquid-dsp sdl2 sdl2_ttf
 
-    - name: Patch code for Windows (unistd.h)
-      if: matrix.os == 'Windows'
-      shell: pwsh
+    # Сборка freqmon
+    - name: Compile freqmon (Linux/macOS)
+      if: runner.os != 'Windows'
       run: |
-        $content = Get-Content main.cpp -Raw
-        $content = $content -replace '#include <unistd\.h>', '#ifdef _WIN32`n#include <windows.h>`n#define usleep(us) Sleep((us)/1000)`n#else`n#include <unistd.h>`n#endif'
-        Set-Content main.cpp $content
+        g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
+          -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+          -I/usr/local/include -L/usr/local/lib \
+          -Wl,-rpath,/usr/local/lib
 
-    - name: Install vcpkg and packages
-      uses: lukka/run-vcpkg@v11
-      id: vcpkg
-      with:
-        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
-        packages: 'sdl2 sdl2-ttf liquid-dsp rtlsdr'
-
-    - name: Create CMakeLists.txt
+    - name: Compile freqmon (Windows via MSYS2)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
       run: |
-        cat > CMakeLists.txt << EOF
-        cmake_minimum_required(VERSION 3.20)
-        project(SpectrumAnalyzer)
+        g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
+          -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+          -I/mingw64/include -L/mingw64/lib \
+          -Wl,-rpath,/mingw64/lib
 
-        set(CMAKE_CXX_STANDARD 17)
-        set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-        find_package(SDL2 CONFIG REQUIRED)
-        find_package(SDL2_ttf CONFIG REQUIRED)
-        find_package(liquid CONFIG REQUIRED)
-        find_package(rtlsdr CONFIG REQUIRED)
-
-        add_executable(app main.cpp)
-
-        target_link_libraries(app PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf liquid::liquid rtlsdr::rtlsdr)
-
-        if(UNIX AND NOT APPLE)
-          target_link_libraries(app PRIVATE pthread)
-        endif()
-        EOF
-
-    - name: Configure CMake
-      run: cmake -B build -DCMAKE_TOOLCHAIN_FILE=${{ steps.vcpkg.outputs.toolchainfile }}
-
-    - name: Build
-      run: cmake --build build --config Release
-
+    # Загрузка артефактов
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: spectrum-analyzer-${{ matrix.os }}
-        path: build/Release/app.exe
+        name: freqmon-${{ runner.os }}
+        path: |
+          freqmon*
