@@ -65,12 +65,11 @@ jobs:
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
         echo "Patching CMakeLists.txt for static build and Windows compatibility..."
-        sed -i 's/SHARED/STATIC/g' CMakeLists.txt
-        sed -i '/target_link_libraries.*PRIVATE c m/i\    if(NOT WIN32)' CMakeLists.txt
-        sed -i '/target_link_libraries.*PRIVATE c m/a\    endif()' CMakeLists.txt
+        sed -i 's/add_library(liquid /add_library(liquid STATIC /' CMakeLists.txt
+        sed -i 's|target_link_libraries(liquid PRIVATE c m)|if(NOT WIN32)\n    target_link_libraries(liquid PRIVATE c m)\nendif()|g' CMakeLists.txt
         mkdir build
         cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_AUTOTESTS=OFF -DBUILD_BENCHMARKS=OFF
         cmake --build . -j$(nproc)
         cmake --install .
         echo "liquid-dsp installed successfully"
