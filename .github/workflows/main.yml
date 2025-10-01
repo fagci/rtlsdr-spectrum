@@ -66,9 +66,9 @@ jobs:
         cd liquid-dsp
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
-        make -j$(nproc)
-        make install
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        cmake --build . -j$(nproc)
+        cmake --install .
         echo "liquid-dsp installed successfully"
 
     # Установка зависимостей для Linux
