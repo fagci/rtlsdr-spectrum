@@ -16,14 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Установка MinGW на Windows
-    - name: Set up MinGW (Windows)
-      if: runner.os == 'Windows'
-      uses: egor-tensin/setup-mingw@v2
-      with:
-        platform: x64
-
-    # Установка MSYS2 для Windows
+    # Установка MSYS2 для Windows (включает MinGW)
     - name: Setup MSYS2 (Windows)
       if: runner.os == 'Windows'
       uses: msys2/setup-msys2@v2
@@ -32,6 +25,7 @@ jobs:
         install: >-
           base-devel
           mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-gcc-libs
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libusb
@@ -39,6 +33,7 @@ jobs:
           mingw-w64-x86_64-liquid-dsp
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-SDL2_ttf
+          git
         update: true
 
     # Установка зависимостей для Linux
