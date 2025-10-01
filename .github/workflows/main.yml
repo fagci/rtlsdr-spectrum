@@ -35,45 +35,54 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libusb
+          mingw-w64-x86_64-kissfft
+          mingw-w64-x86_64-liquid-dsp
+          mingw-w64-x86_64-SDL2
+          mingw-w64-x86_64-SDL2_ttf
         update: true
 
-    # Клонирование и установка custom rtl-sdr (Linux/macOS)
-    - name: Clone and build custom rtl-sdr (Linux/macOS)
+    # Установка зависимостей для Linux
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential curl
+
+    # Установка зависимостей для macOS
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install libusb kissfft liquid-dsp sdl2 sdl2_ttf cmake pkg-config
+
+    # Загрузка и установка custom rtl-sdr (Linux/macOS)
+    - name: Download and build custom rtl-sdr (Linux/macOS)
       if: runner.os != 'Windows'
       run: |
-        git clone --depth 1 -b fast_retune https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+        curl -L https://gitea.osmocom.org/api/v1/repos/sultanqasim/rtl-sdr/archive/refs/heads/fast_retune.tar.gz -o rtl-sdr.tar.gz
+        tar -xzf rtl-sdr.tar.gz
+        mv rtl-sdr-* rtl-sdr
         cd rtl-sdr
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
         make -j$(nproc)
         sudo make install
-      shell: bash
+        sudo ldconfig  # Важно для обновления кэша библиотек
 
-    # Клонирование и установка custom rtl-sdr (Windows)
-    - name: Clone and build custom rtl-sdr (Windows)
+    # Загрузка и установка custom rtl-sdr (Windows)
+    - name: Download and build custom rtl-sdr (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
-        git clone --depth 1 -b fast_retune https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+        curl -L https://gitea.osmocom.org/api/v1/repos/sultanqasim/rtl-sdr/archive/refs/heads/fast_retune.tar.gz -o rtl-sdr.tar.gz
+        tar -xzf rtl-sdr.tar.gz
+        mv rtl-sdr-* rtl-sdr
         cd rtl-sdr
         mkdir build
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
         mingw32-make -j$(nproc)
         mingw32-make install
-
-    # Установка остальных зависимостей (Linux)
-    - name: Install dependencies (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev
-
-    - name: Install dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install libusb kissfft liquid-dsp sdl2 sdl2_ttf
 
     # Сборка freqmon (Linux/macOS)
     - name: Compile freqmon (Linux/macOS)
@@ -91,8 +100,7 @@ jobs:
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
           -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
-          -I/mingw64/include -L/mingw64/lib \
-          -Wl,-rpath,/mingw64/lib
+          -I/mingw64/include -L/mingw64/lib
 
     # Загрузка артефактов
     - name: Upload binary
