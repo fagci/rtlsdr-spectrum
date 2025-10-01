@@ -68,6 +68,7 @@ jobs:
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
         ./bootstrap.sh
+        export ac_cv_lib_c_main=yes
         ./configure --prefix=/mingw64 --enable-static --disable-shared CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
         make -j$(nproc)
         make install
