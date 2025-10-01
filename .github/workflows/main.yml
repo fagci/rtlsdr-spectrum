@@ -38,8 +38,9 @@ jobs:
         update: true
       shell: msys2 {0}
 
-    # Клонирование и установка custom rtl-sdr
-    - name: Clone custom rtl-sdr repo
+    # Клонирование и установка custom rtl-sdr (Linux/macOS)
+    - name: Clone and build custom rtl-sdr (Linux/macOS)
+      if: runner.os != 'Windows'
       run: |
         git clone --depth 1 -b fast_retune https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
         cd rtl-sdr
@@ -48,11 +49,10 @@ jobs:
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
         make -j$(nproc)
         sudo make install
-      if: runner.os != 'Windows'
       shell: bash
 
-    # Windows: сборка rtl-sdr в MSYS2
-    - name: Build and install custom rtl-sdr (Windows)
+    # Клонирование и установка custom rtl-sdr (Windows)
+    - name: Clone and build custom rtl-sdr (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
@@ -76,7 +76,7 @@ jobs:
       run: |
         brew install kissfft liquid-dsp sdl2 sdl2_ttf
 
-    # Сборка freqmon
+    # Сборка freqmon (Linux/macOS)
     - name: Compile freqmon (Linux/macOS)
       if: runner.os != 'Windows'
       run: |
@@ -85,7 +85,8 @@ jobs:
           -I/usr/local/include -L/usr/local/lib \
           -Wl,-rpath,/usr/local/lib
 
-    - name: Compile freqmon (Windows via MSYS2)
+    # Сборка freqmon (Windows)
+    - name: Compile freqmon (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
