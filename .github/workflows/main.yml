@@ -32,21 +32,20 @@ jobs:
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-SDL2_ttf
           git
-          autoconf
-          automake
-          libtool
+          mingw-w64-x86_64-make
         update: true
 
-    # Установка liquid-dsp через CMake на Windows
+    # Установка liquid-dsp через autotools на Windows
     - name: Install liquid-dsp manually (Windows)
       if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
-        mkdir build && cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DCMAKE_BUILD_TYPE=Release
-        cmake --build . --config Release --target install
+        ./bootstrap.sh
+        ./configure --prefix=/mingw64
+        make -j$(nproc)
+        make install
 
     # Установка kissfft вручную на Windows
     - name: Install kissfft manually (Windows)
@@ -56,8 +55,9 @@ jobs:
         git clone https://github.com/mborgerding/kissfft.git
         cd kissfft
         mkdir build && cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF -DCMAKE_BUILD_TYPE=Release
-        cmake --build . --config Release --target install
+        cmake .. -DCMAKE_INSTALL_PREFIX=/mingw64 -DKISSFFT_TOOLS=OFF -DKISSFFT_STATIC=OFF -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+        make install
 
     # Установка зависимостей для Linux
     - name: Install dependencies (Linux)
@@ -90,8 +90,9 @@ jobs:
         git checkout fast_retune
         mkdir build
         cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
-        cmake --build . --config Release --target install
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
+        make -j$(nproc)
+        make install
 
     # Сборка freqmon (Linux)
     - name: Compile freqmon (Linux)
