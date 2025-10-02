@@ -84,6 +84,7 @@ jobs:
         export ac_cv_func_crealf=yes
         export ac_cv_func_cimagf=yes
         export ac_cv_func_sqrtf=yes
+        export ac_cv_header_sys_resource_h=yes
         ./configure --prefix=/mingw64 CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
         make -j$(nproc)
         make install
