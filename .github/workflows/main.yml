@@ -77,6 +77,13 @@ jobs:
         export ac_cv_func_memmove=yes
         export ac_cv_func_memcpy=yes
         export ac_cv_func_sinf=yes
+        export ac_cv_func_cosf=yes
+        export ac_cv_func_expf=yes
+        export ac_cv_func_cargf=yes
+        export ac_cv_func_cexpf=yes
+        export ac_cv_func_crealf=yes
+        export ac_cv_func_cimagf=yes
+        export ac_cv_func_sqrtf=yes
         ./configure --prefix=/mingw64 CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
         make -j$(nproc)
         make install
