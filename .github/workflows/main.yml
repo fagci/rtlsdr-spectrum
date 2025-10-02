@@ -86,7 +86,7 @@ jobs:
         export ac_cv_func_sqrtf=yes
         export ac_cv_header_sys_resource_h=yes
         ./configure --prefix=/mingw64 --disable-shared CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
-        sed -i 's/-lc//g' Makefile
+        sed -i 's/-lm -lc/-lm/g' Makefile
         make -j$(nproc)
         make install
         echo "liquid-dsp installed successfully"
@@ -125,6 +125,9 @@ jobs:
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
         make -j$(nproc)
         make install
+        cp ../include/rtl-sdr.h /mingw64/include/
+        cp ../include/rtl-sdr_export.h /mingw64/include/
+        echo "Headers copied successfully"
 
     # Сборка freqmon (Linux)
     - name: Compile freqmon (Linux)
