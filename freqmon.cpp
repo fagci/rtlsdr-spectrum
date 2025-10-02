@@ -16,6 +16,10 @@
 #include <liquid/liquid.h>
 #include <rtl-sdr.h>
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 // === Константы ===
 constexpr size_t FFT_SIZE = 8192;
 constexpr uint32_t SAMPLE_RATE = 2400000;
