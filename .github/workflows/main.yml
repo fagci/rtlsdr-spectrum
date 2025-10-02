@@ -86,6 +86,7 @@ jobs:
         export ac_cv_func_sqrtf=yes
         export ac_cv_header_sys_resource_h=yes
         ./configure --prefix=/mingw64 --disable-shared CFLAGS="-O3 -fPIC" LDFLAGS="-L/mingw64/lib"
+        sed -i 's/-lc//g' Makefile
         make -j$(nproc)
         make install
         echo "liquid-dsp installed successfully"
