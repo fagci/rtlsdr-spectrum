@@ -122,12 +122,10 @@ jobs:
         git checkout fast_retune
         mkdir build
         cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64
         make -j$(nproc)
         make install
-        cp ../include/rtl-sdr.h /mingw64/include/
-        cp ../include/rtl-sdr_export.h /mingw64/include/
-        echo "Headers copied successfully"
+        echo "rtl-sdr installed successfully"
 
     # Сборка freqmon (Linux)
     - name: Compile freqmon (Linux)
