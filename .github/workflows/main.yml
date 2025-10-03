@@ -117,7 +117,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
-          -lrtlsdr -lkissfft-float131 -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+          -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
           -I/usr/local/include -L/usr/local/lib
 
     # Сборка freqmon (Windows)
