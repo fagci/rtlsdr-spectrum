@@ -67,6 +67,7 @@ jobs:
         echo "Installing liquid-dsp manually..."
         git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
+        sed -i 's/SHARED/STATIC/g' CMakeLists.txt
         sed -i '/target_link_libraries.*c m/d' CMakeLists.txt
         mkdir build
         cd build
