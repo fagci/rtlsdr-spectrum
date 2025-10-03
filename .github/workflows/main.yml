@@ -72,7 +72,8 @@ jobs:
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_AUTOTESTS=OFF -DBUILD_BENCHMARKS=OFF
         cmake --build . -j$(nproc)
-        cmake --install .
+        cp libliquid.a /mingw64/lib/
+        cp -r ../include/liquid /mingw64/include/
         echo "liquid-dsp installed successfully"
 
     # Установка зависимостей для Linux
@@ -108,7 +109,7 @@ jobs:
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
         make -j$(nproc)
-        make install
+        cp src/librtlsdr.a /mingw64/lib/
         cp ../include/rtl-sdr.h /mingw64/include/
         cp ../include/rtl-sdr_export.h /mingw64/include/
         echo "rtl-sdr installed successfully"
