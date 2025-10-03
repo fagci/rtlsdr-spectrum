@@ -109,8 +109,8 @@ jobs:
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
         make -j$(nproc)
         make install
-        cp ../../include/rtl-sdr.h /mingw64/include/
-        cp ../../include/rtl-sdr_export.h /mingw64/include/
+        cp ../include/rtl-sdr.h /mingw64/include/
+        cp ../include/rtl-sdr_export.h /mingw64/include/
         echo "rtl-sdr installed successfully"
 
     # Сборка freqmon (Linux)
@@ -118,7 +118,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
-          -lrtlsdr -lkissfft -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+          -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
           -I/usr/local/include -L/usr/local/lib
 
     # Сборка freqmon (Windows)
