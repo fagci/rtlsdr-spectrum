@@ -11,71 +11,93 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os:
-          # - ubuntu-latest
-          - windows-latest
+        os: [ubuntu-latest]
+        # Windows временно отключен
+        # os: [ubuntu-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v4
 
+    # Кэширование MSYS2 для Windows
+    # - name: Cache MSYS2 (Windows)
+    #   if: runner.os == 'Windows'
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       D:\a\_temp\msys64
+    #     key: ${{ runner.os }}-msys2-${{ hashFiles('.github/workflows/*.yml') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-msys2-
+
     # Установка MSYS2 для Windows (включает MinGW)
-    - name: Setup MSYS2 (Windows)
-      if: runner.os == 'Windows'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        install: >-
-          base-devel
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-gcc-libs
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-pkg-config
-          mingw-w64-x86_64-libusb
-          mingw-w64-x86_64-SDL2
-          mingw-w64-x86_64-SDL2_ttf
-          git
-          mingw-w64-x86_64-make
-          autoconf
-          automake
-          libtool
-        update: true
+    # - name: Setup MSYS2 (Windows)
+    #   if: runner.os == 'Windows'
+    #   uses: msys2/setup-msys2@v2
+    #   with:
+    #     msystem: MINGW64
+    #     install: >-
+    #       base-devel
+    #       mingw-w64-x86_64-gcc
+    #       mingw-w64-x86_64-gcc-libs
+    #       mingw-w64-x86_64-cmake
+    #       mingw-w64-x86_64-pkg-config
+    #       mingw-w64-x86_64-libusb
+    #       mingw-w64-x86_64-SDL2
+    #       mingw-w64-x86_64-SDL2_ttf
+    #       git
+    #       mingw-w64-x86_64-make
+    #       autoconf
+    #       automake
+    #       libtool
+    #     update: true
 
     # Установка kissfft вручную (исправленная версия)
-    - name: Install kissfft manually (Windows)
-      if: runner.os == 'Windows'
-      shell: msys2 {0}
-      run: |
-        echo "Installing kissfft manually..."
-        git clone https://github.com/mborgerding/kissfft.git
-        cd kissfft
-        # Создаем директорию для объектных файлов
-        mkdir -p obj
-        # Компилируем основные файлы
-        gcc -O3 -fPIC -I. -c kiss_fft.c -o obj/kiss_fft.o
-        gcc -O3 -fPIC -I. -c kiss_fftr.c -o obj/kiss_fftr.o
-        # Создаем библиотеку
-        ar rcs libkissfft-float.a obj/kiss_fft.o obj/kiss_fftr.o
-        # Устанавливаем
-        cp libkissfft-float.a /mingw64/lib/
-        cp kiss_fft.h /mingw64/include/
-        cp kiss_fftr.h /mingw64/include/
-        echo "kissfft installed successfully"
+    # - name: Install kissfft manually (Windows)
+    #   if: runner.os == 'Windows'
+    #   shell: msys2 {0}
+    #   run: |
+    #     echo "Installing kissfft manually..."
+    #     git clone https://github.com/mborgerding/kissfft.git
+    #     cd kissfft
+    #     # Создаем директорию для объектных файлов
+    #     mkdir -p obj
+    #     # Компилируем основные файлы
+    #     gcc -O3 -fPIC -I. -c kiss_fft.c -o obj/kiss_fft.o
+    #     gcc -O3 -fPIC -I. -c kiss_fftr.c -o obj/kiss_fftr.o
+    #     # Создаем библиотеку
+    #     ar rcs libkissfft-float.a obj/kiss_fft.o obj/kiss_fftr.o
+    #     # Устанавливаем
+    #     cp libkissfft-float.a /mingw64/lib/
+    #     cp kiss_fft.h /mingw64/include/
+    #     cp kiss_fftr.h /mingw64/include/
+    #     echo "kissfft installed successfully"
 
     # Установка liquid-dsp вручную (исправленная версия)
-    - name: Install liquid-dsp manually (Windows)
-      if: runner.os == 'Windows'
-      shell: msys2 {0}
-      run: |
-        echo "Installing liquid-dsp manually..."
-        git clone https://github.com/jgaeddert/liquid-dsp.git
-        cd liquid-dsp
-        sed -i '/target_link_libraries.*c m/d' CMakeLists.txt
-        mkdir build
-        cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_AUTOTESTS=OFF -DBUILD_BENCHMARKS=OFF
-        cmake --build . -j$(nproc)
-        cmake --install .
-        echo "liquid-dsp installed successfully"
+    # - name: Install liquid-dsp manually (Windows)
+    #   if: runner.os == 'Windows'
+    #   shell: msys2 {0}
+    #   run: |
+    #     echo "Installing liquid-dsp manually..."
+    #     git clone https://github.com/jgaeddert/liquid-dsp.git
+    #     cd liquid-dsp
+    #     sed -i '/target_link_libraries.*c m/d' CMakeLists.txt
+    #     mkdir build
+    #     cd build
+    #     cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_AUTOTESTS=OFF -DBUILD_BENCHMARKS=OFF
+    #     cmake --build . -j$(nproc)
+    #     cmake --install .
+    #     echo "liquid-dsp installed successfully"
+
+    # Кэширование apt пакетов для Linux
+    - name: Cache apt packages (Linux)
+      if: runner.os == 'Linux'
+      uses: actions/cache@v4
+      with:
+        path: |
+          /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/*.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
 
     # Установка зависимостей для Linux
     - name: Install dependencies (Linux)
@@ -99,22 +121,22 @@ jobs:
         sudo ldconfig
 
     # Загрузка и установка custom rtl-sdr (Windows)
-    - name: Download and build custom rtl-sdr (Windows)
-      if: runner.os == 'Windows'
-      shell: msys2 {0}
-      run: |
-        git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
-        cd rtl-sdr
-        git checkout fast_retune
-        mkdir build
-        cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
-        make -j$(nproc)
-        make install
-        # Copy headers from the correct location (parent directory of build)
-        cp ../include/rtl-sdr.h /mingw64/include/ 2>/dev/null || echo "rtl-sdr.h already installed"
-        cp ../include/rtl-sdr_export.h /mingw64/include/ 2>/dev/null || echo "rtl-sdr_export.h already installed"
-        echo "rtl-sdr installed successfully"
+    # - name: Download and build custom rtl-sdr (Windows)
+    #   if: runner.os == 'Windows'
+    #   shell: msys2 {0}
+    #   run: |
+    #     git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+    #     cd rtl-sdr
+    #     git checkout fast_retune
+    #     mkdir build
+    #     cd build
+    #     cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+    #     make -j$(nproc)
+    #     make install
+    #     # Copy headers from the correct location (parent directory of build)
+    #     cp ../include/rtl-sdr.h /mingw64/include/ 2>/dev/null || echo "rtl-sdr.h already installed"
+    #     cp ../include/rtl-sdr_export.h /mingw64/include/ 2>/dev/null || echo "rtl-sdr_export.h already installed"
+    #     echo "rtl-sdr installed successfully"
 
     # Сборка freqmon (Linux)
     - name: Compile freqmon (Linux)
@@ -125,13 +147,13 @@ jobs:
           -I/usr/local/include -L/usr/local/lib
 
     # Сборка freqmon (Windows)
-    - name: Compile freqmon (Windows)
-      if: runner.os == 'Windows'
-      shell: msys2 {0}
-      run: |
-        g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
-          -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
-          -I/mingw64/include -L/mingw64/lib
+    # - name: Compile freqmon (Windows)
+    #   if: runner.os == 'Windows'
+    #   shell: msys2 {0}
+    #   run: |
+    #     g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
+    #       -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+    #       -I/mingw64/include -L/mingw64/lib
 
     # Загрузка артефактов
     - name: Upload binary
