@@ -1,4 +1,4 @@
-name: Build freqmon with custom rtl-sdr (Windows only)
+name: Build freqmon with custom rtl-sdr
 
 on:
   push:
@@ -8,13 +8,17 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v4
 
     # Установка MSYS2 для Windows (включает MinGW)
-    - name: Setup MSYS2
+    - name: Setup MSYS2 (Windows)
+      if: runner.os == 'Windows'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -34,24 +38,13 @@ jobs:
           libtool
         update: true
 
-    # Кэширование kissfft
-    - name: Cache kissfft
-      id: cache-kissfft
-      uses: actions/cache@v4
-      with:
-        path: |
-          /mingw64/lib/libkissfft-float.a
-          /mingw64/include/kiss_fft.h
-          /mingw64/include/kiss_fftr.h
-        key: ${{ runner.os }}-kissfft-20241219
-
     # Установка kissfft вручную (исправленная версия)
-    - name: Install kissfft manually
-      if: steps.cache-kissfft.outputs.cache-hit != 'true'
+    - name: Install kissfft manually (Windows)
+      if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
         echo "Installing kissfft manually..."
-        git clone https://github.com/mborgerding/kissfft.git  
+        git clone https://github.com/mborgerding/kissfft.git
         cd kissfft
         # Создаем директорию для объектных файлов
         mkdir -p obj
@@ -60,29 +53,19 @@ jobs:
         gcc -O3 -fPIC -I. -c kiss_fftr.c -o obj/kiss_fftr.o
         # Создаем библиотеку
         ar rcs libkissfft-float.a obj/kiss_fft.o obj/kiss_fftr.o
-        # Устанавливаем в систему
+        # Устанавливаем
         cp libkissfft-float.a /mingw64/lib/
         cp kiss_fft.h /mingw64/include/
         cp kiss_fftr.h /mingw64/include/
         echo "kissfft installed successfully"
 
-    # Кэширование liquid-dsp
-    - name: Cache liquid-dsp
-      id: cache-liquid-dsp
-      uses: actions/cache@v4
-      with:
-        path: |
-          /mingw64/lib/libliquid.a
-          /mingw64/include/liquid/
-        key: ${{ runner.os }}-liquid-dsp-20241219
-
     # Установка liquid-dsp вручную (исправленная версия)
-    - name: Install liquid-dsp manually
-      if: steps.cache-liquid-dsp.outputs.cache-hit != 'true'
+    - name: Install liquid-dsp manually (Windows)
+      if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
         echo "Installing liquid-dsp manually..."
-        git clone https://github.com/jgaeddert/liquid-dsp.git  
+        git clone https://github.com/jgaeddert/liquid-dsp.git
         cd liquid-dsp
         sed -i '/target_link_libraries.*c m/d' CMakeLists.txt
         mkdir build
@@ -92,75 +75,60 @@ jobs:
         cmake --install .
         echo "liquid-dsp installed successfully"
 
-    # Кэширование скомпилированного custom rtl-sdr (без установки)
-    - name: Cache custom rtl-sdr build
-      id: cache-rtl-sdr-build
-      uses: actions/cache@v4
-      with:
-        path: |
-          rtl-sdr/
-        key: ${{ runner.os }}-rtl-sdr-fast_retune-build-20241219
-
-    # Загрузка и сборка custom rtl-sdr (без установки)
-    - name: Download and build custom rtl-sdr
-      if: steps.cache-rtl-sdr-build.outputs.cache-hit != 'true'
-      shell: msys2 {0}
+    # Установка зависимостей для Linux
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
       run: |
-        echo "Cloning custom rtl-sdr..."
+        sudo apt-get update
+        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential git
+
+    # Загрузка и установка custom rtl-sdr (Linux)
+    - name: Download and build custom rtl-sdr (Linux)
+      if: runner.os == 'Linux'
+      run: |
         git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to clone rtl-sdr repository"
-          exit 1
-        fi
         cd rtl-sdr
-        echo "Checking out fast_retune branch..."
         git checkout fast_retune
-        if [ $? -ne 0 ]; then
-          echo "Error: Failed to checkout fast_retune branch"
-          exit 1
-        fi
         mkdir build
         cd build
-        echo "Configuring rtl-sdr with CMake..."
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF
-        if [ $? -ne 0 ]; then
-          echo "Error: CMake configuration failed"
-          exit 1
-        fi
-        echo "Building rtl-sdr with -j2..."
-        # Используем -j2 вместо -j$(nproc) для стабильности
-        make -j2
-        if [ $? -ne 0 ]; then
-          echo "Error: Build failed"
-          exit 1
-        fi
-        echo "Custom rtl-sdr built successfully (without installation)."
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+        make -j$(nproc)
+        sudo make install
+        sudo ldconfig
 
-    # Сборка freqmon - указываем пути к локальному rtl-sdr
-    - name: Compile freqmon
+    # Загрузка и установка custom rtl-sdr (Windows)
+    - name: Download and build custom rtl-sdr (Windows)
+      if: runner.os == 'Windows'
       shell: msys2 {0}
       run: |
-        echo "Compiling freqmon..."
-        # Указываем пути к заголовкам и библиотеке rtl-sdr
-        # -I для заголовочных файлов
-        # -L для директории с .a файлами
-        # Линкуем с librtlsdr.a напрямую
+        git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git
+        cd rtl-sdr
+        git checkout fast_retune
+        mkdir build
+        cd build
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        make -j$(nproc)
+        make install
+        cp ../../include/rtl-sdr.h /mingw64/include/
+        cp ../../include/rtl-sdr_export.h /mingw64/include/
+        echo "rtl-sdr installed successfully"
+
+    # Сборка freqmon (Linux)
+    - name: Compile freqmon (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
+          -lrtlsdr -lkissfft -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
+          -I/usr/local/include -L/usr/local/lib
+
+    # Сборка freqmon (Windows)
+    - name: Compile freqmon (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
-          -I./rtl-sdr/include \
-          -L./rtl-sdr/build/src \
           -lrtlsdr -lkissfft-float -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
-          -I/mingw64/include -L/mingw64/lib
-        if [ $? -ne 0 ]; then
-          echo "Error: Compilation failed"
-          # Проверим, где находится librtlsdr.a
-          echo "Looking for librtlsdr.a..."
-          find ./rtl-sdr -name "librtlsdr.a" -type f
-          # Проверим, где находятся заголовочные файлы
-          echo "Looking for rtl-sdr.h..."
-          find ./rtl-sdr -name "rtl-sdr.h" -type f
-          exit 1
-        fi
-        echo "freqmon compiled successfully"
+          -I/mingw64/include -L/mingw64/lib -I./rtl-sdr/include/ -L./rtl-sdr/build/lib/
 
     # Загрузка артефактов
     - name: Upload binary
@@ -168,4 +136,4 @@ jobs:
       with:
         name: freqmon-${{ runner.os }}
         path: |
-          freqmon.exe
+          freqmon*
