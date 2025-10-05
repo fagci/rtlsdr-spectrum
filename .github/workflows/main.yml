@@ -1,4 +1,4 @@
-name: Build freqmon with custom rtl-sdr
+name: Build freqmon with custom rtl-sdr (Windows only)
 
 on:
   push:
@@ -8,19 +8,13 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: 
-          #- ubuntu-latest
-          - windows-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
 
     # Установка MSYS2 для Windows (включает MinGW)
-    - name: Setup MSYS2 (Windows)
-      if: runner.os == 'Windows'
+    - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -40,9 +34,20 @@ jobs:
           libtool
         update: true
 
+    # Кэширование kissfft
+    - name: Cache kissfft
+      id: cache-kissfft
+      uses: actions/cache@v4
+      with:
+        path: |
+          /mingw64/lib/libkissfft-float.a
+          /mingw64/include/kiss_fft.h
+          /mingw64/include/kiss_fftr.h
+        key: ${{ runner.os }}-kissfft-20241219
+
     # Установка kissfft вручную (исправленная версия)
-    - name: Install kissfft manually (Windows)
-      if: runner.os == 'Windows'
+    - name: Install kissfft manually
+      if: steps.cache-kissfft.outputs.cache-hit != 'true'
       shell: msys2 {0}
       run: |
         echo "Installing kissfft manually..."
@@ -61,9 +66,19 @@ jobs:
         cp kiss_fftr.h /mingw64/include/
         echo "kissfft installed successfully"
 
+    # Кэширование liquid-dsp
+    - name: Cache liquid-dsp
+      id: cache-liquid-dsp
+      uses: actions/cache@v4
+      with:
+        path: |
+          /mingw64/lib/libliquid.a
+          /mingw64/include/liquid/
+        key: ${{ runner.os }}-liquid-dsp-20241219
+
     # Установка liquid-dsp вручную (исправленная версия)
-    - name: Install liquid-dsp manually (Windows)
-      if: runner.os == 'Windows'
+    - name: Install liquid-dsp manually
+      if: steps.cache-liquid-dsp.outputs.cache-hit != 'true'
       shell: msys2 {0}
       run: |
         echo "Installing liquid-dsp manually..."
@@ -77,30 +92,21 @@ jobs:
         cmake --install .
         echo "liquid-dsp installed successfully"
 
-    # Установка зависимостей для Linux
-    - name: Install dependencies (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libusb-1.0-0-dev libkissfft-dev libliquid-dev libsdl2-dev libsdl2-ttf-dev cmake pkg-config build-essential git
+    # Кэширование custom rtl-sdr
+    - name: Cache custom rtl-sdr
+      id: cache-rtl-sdr
+      uses: actions/cache@v4
+      with:
+        path: |
+          /mingw64/lib/librtlsdr.a
+          /mingw64/lib/pkgconfig/librtlsdr.pc
+          /mingw64/include/rtl-sdr.h
+          /mingw64/include/rtl-sdr_export.h
+        key: ${{ runner.os }}-rtl-sdr-fast_retune-20241219
 
-    # Загрузка и установка custom rtl-sdr (Linux)
-    - name: Download and build custom rtl-sdr (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git  
-        cd rtl-sdr
-        git checkout fast_retune
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
-        make -j$(nproc)
-        sudo make install
-        sudo ldconfig
-
-    # Загрузка и установка custom rtl-sdr (Windows)
-    - name: Download and build custom rtl-sdr (Windows)
-      if: runner.os == 'Windows'
+    # Загрузка и установка custom rtl-sdr
+    - name: Download and build custom rtl-sdr
+      if: steps.cache-rtl-sdr.outputs.cache-hit != 'true'
       shell: msys2 {0}
       run: |
         git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git  
@@ -113,17 +119,8 @@ jobs:
         make install
         echo "rtl-sdr installed successfully"
 
-    # Сборка freqmon (Linux)
-    - name: Compile freqmon (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon freqmon.cpp \
-          -lrtlsdr -lkissfft -lpthread -lliquid -fpermissive -lSDL2 -lSDL2_ttf \
-          -I/usr/local/include -L/usr/local/lib
-
-    # Сборка freqmon (Windows)
-    - name: Compile freqmon (Windows)
-      if: runner.os == 'Windows'
+    # Сборка freqmon
+    - name: Compile freqmon
       shell: msys2 {0}
       run: |
         g++ -O3 -march=native -ffast-math -std=c++23 -o freqmon.exe freqmon.cpp \
@@ -136,4 +133,4 @@ jobs:
       with:
         name: freqmon-${{ runner.os }}
         path: |
-          freqmon*
+          freqmon.exe
