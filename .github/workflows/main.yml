@@ -92,32 +92,76 @@ jobs:
         cmake --install .
         echo "liquid-dsp installed successfully"
 
-    # Кэширование custom rtl-sdr
-    - name: Cache custom rtl-sdr
-      id: cache-rtl-sdr
-      uses: actions/cache@v4
-      with:
-        path: |
-          /mingw64/lib/librtlsdr.a
-          /mingw64/lib/pkgconfig/librtlsdr.pc
-          /mingw64/include/rtl-sdr.h
-          /mingw64/include/rtl-sdr_export.h
-        key: ${{ runner.os }}-rtl-sdr-fast_retune-20241219
-
     # Загрузка и установка custom rtl-sdr
     - name: Download and build custom rtl-sdr
       if: steps.cache-rtl-sdr.outputs.cache-hit != 'true'
       shell: msys2 {0}
       run: |
+        echo "Cloning custom rtl-sdr..."
         git clone https://gitea.osmocom.org/sultanqasim/rtl-sdr.git  
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to clone rtl-sdr repository"
+          exit 1
+        fi
         cd rtl-sdr
+        echo "Checking out fast_retune branch..."
         git checkout fast_retune
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to checkout fast_retune branch"
+          exit 1
+        fi
         mkdir build
         cd build
+        echo "Configuring rtl-sdr with CMake..."
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/mingw64 -DBUILD_SHARED_LIBS=OFF
+        if [ $? -ne 0 ]; then
+          echo "Error: CMake configuration failed"
+          exit 1
+        fi
+        echo "Building rtl-sdr..."
         make -j$(nproc)
+        if [ $? -ne 0 ]; then
+          echo "Error: Build failed"
+          exit 1
+        fi
+        echo "Installing rtl-sdr..." # Выводим сообщение перед установкой
+        # Выполняем make install в отдельной команде, чтобы избежать проблем с завершением
+        # shell: msys2 {0} гарантирует выполнение в правильной среде
+        echo "Running make install..."
         make install
-        echo "rtl-sdr installed successfully"
+        if [ $? -ne 0 ]; then
+          echo "Error: Installation failed"
+          exit 1
+        fi
+        echo "Installation command completed."
+
+    # Проверка наличия установленных файлов (отдельный шаг)
+    - name: Verify rtl-sdr installation
+      shell: msys2 {0}
+      run: |
+        echo "Checking for installed files..."
+        if [ ! -f "/mingw64/include/rtl-sdr.h" ]; then
+          echo "Error: rtl-sdr.h was not installed correctly or not found in /mingw64/include/"
+          echo "Listing contents of /mingw64/include/:"
+          ls -la /mingw64/include/ | grep -i rtl
+          echo "Listing contents of /mingw64/lib/:"
+          ls -la /mingw64/lib/ | grep -i rtl
+          exit 1
+        else
+          echo "rtl-sdr.h found at /mingw64/include/"
+        fi
+        if [ ! -f "/mingw64/lib/librtlsdr.a" ]; then
+          echo "Error: librtlsdr.a was not installed correctly or not found in /mingw64/lib/"
+          echo "Listing contents of /mingw64/lib/:"
+          ls -la /mingw64/lib/ | grep -i rtl
+          echo "Listing contents of /mingw64/include/:"
+          ls -la /mingw64/include/ | grep -i rtl
+          exit 1
+        else
+          echo "librtlsdr.a found at /mingw64/lib/"
+        fi
+        echo "rtl-sdr installation verified successfully."
+
 
     # Сборка freqmon
     - name: Compile freqmon
